@@ -3,16 +3,16 @@ import { HousesRepository } from "./houses.repositories";
 import { PrismaService } from "src/database/prisma.service";
 import { CreateHouseDto } from "../dto/create-house.dto";
 import { House } from "../entities/house.entity";
+import { UserRole as PrismaUserRole } from "@prisma/client";
 import { UserRole } from "../enums/user-role.enum";
-import { Prisma, UserRole as  PrismaUserRole } from "@prisma/client";
-
+import { HouseMapper } from "../mappers/house.mapper";
 
 @Injectable()
 export class PrismaHousesRepository implements HousesRepository {
-    constructor (private prisma: PrismaService) {}
+    constructor (private prisma: PrismaService){}
 
-    async create(data: CreateHouseDto, inviteCode: string, ownerId: string): Promise<House>{
-        return await this.prisma.$transaction(async (tx) => {
+    async create(data: CreateHouseDto, inviteCode: string, ownerId: string): Promise<House> {
+        const rawHouse = await this.prisma.$transaction(async (tx) => {
             const house = await tx.house.create({
                 data: {
                     name: data.name,
@@ -31,31 +31,33 @@ export class PrismaHousesRepository implements HousesRepository {
             });
             return house;
         });
+        return HouseMapper.toDomain(rawHouse);
     }
+
 
     async findByInviteCode(code: string): Promise<House | null> {
-        return this.prisma.house.findUnique({
-            where: { inviteCode: code},
+        const raw = await this.prisma.house.findUnique({
+            where: { inviteCode: code },
         });
+        if (!raw) return null;
+        return HouseMapper.toDomain(raw);
     }
 
-
-    async findMember(userId: string, houseId: string): Promise<{role: UserRole} | null>{
+    async findMember(userId: string, houseId: string): Promise<{role: UserRole} | null> {
         const member = await this.prisma.membership.findUnique({
             where: {
-                userId_houseId: { userId, houseId},
+                userId_houseId: {userId, houseId},
             },
         });
 
         if (!member) return null;
 
-        return {
-            role: member.role === PrismaUserRole.ADMIN ? UserRole.ADMIN : UserRole.MEMBER
-        };
+        const role = member.role === PrismaUserRole.ADMIN ? UserRole.ADMIN:UserRole.MEMBER;
+        
+        return { role };
     }
 
-
-    async addMember(userId: string, houseId: string): Promise<void> {
+    async addMember(userId: string, houseId: string): Promise<void>{
         await this.prisma.membership.create({
             data: {
                 userId,
