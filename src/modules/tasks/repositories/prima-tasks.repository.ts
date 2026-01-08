@@ -2,89 +2,90 @@ import { Injectable } from "@nestjs/common";
 import { TasksRepository } from "./tasks.repository";
 import { PrismaService } from "src/database/prisma.service";
 import { CreateTaskDefinitionDto } from "../dto/create-task-definition.dto";
-import { TaskDefinition, TaskInstance, TaskFrequency as PrismaTaskFrequency, TaskStatus as PrismaTaskStatus } from "@prisma/client";
+// Tipos do Prisma (apenas para uso interno aqui)
+import { TaskFrequency as PrismaTaskFrequency, TaskStatus as PrismaTaskStatus } from "@prisma/client";
+// Tipos do Domínio
+import { TaskDefinition } from "../entities/task-definition.entity";
+import { TaskInstance } from "../entities/task-instance.entity";
 import { TaskStatus } from "../enums/task-status.enum";
-
+import { TaskMapper } from "../mappers/task.mapper";
 
 @Injectable()
-export class PrismaTaskRepository implements TasksRepository {
+export class PrismaTasksRepository implements TasksRepository {
+
     constructor(private readonly prisma: PrismaService){}
 
     async createDefinition(data: CreateTaskDefinitionDto): Promise<TaskDefinition> {
-        return await this.prisma.taskDefinition.create({
+        const raw = await this.prisma.taskDefinition.create({
             data: {
                 title: data.title,
                 description: data.description,
                 weight: data.weight,
                 frequency: data.frequency as unknown as PrismaTaskFrequency,
-
                 interval: data.interval || 1,
                 selectedDays: data.selectedDays || [],
-
                 startDate: data.startDate ? new Date(data.startDate) : new Date(),
-                
                 repeatCount: data.repeatCount || 1,
-                houseId: data.houseId,
+                houseId: data.houseId
             }
-        })
+        });
+
+        // CONVERSÃO AQUI
+        return TaskMapper.toDomainDefinition(raw);
     }
 
-
     async createInstance(taskDefId: string, dueDate: Date): Promise<void> {
+        // Void não precisa de mapper
         await this.prisma.taskInstance.create({
             data: {
                 taskDefId: taskDefId,
                 dueDate: dueDate,
-                status: TaskStatus.PENDING,
+                status: PrismaTaskStatus.PENDING,
             }
         })
     }
 
-    async findInstancesByHouseId(houseId: string, status?: TaskStatus): Promise<TaskInstance[]> {
-        return await this.prisma.taskInstance.findMany({
-            where: {
-                // Filtra pela casa
-                taskDef: {
-                    houseId: houseId,
-                },
-                // Filtra pelo status (caso ele seja fornecido)
-                // Sintaxe do spread condicional do JS
-
-                ...(status ? {status : status as unknown as PrismaTaskStatus} : {})
-            },
-            include: {
-                taskDef: true, // Traz os dados da definição
-                assignedTo: true, // Traz os dados do usuário
-            },
-            orderBy: {
-                dueDate: 'asc',
-            }
-        });
-    }
-
-    
     async findAllDefinitions(): Promise<TaskDefinition[]> {
-        return await this.prisma.taskDefinition.findMany();
+        const rawList = await this.prisma.taskDefinition.findMany();
+        // Mapeia a lista inteira
+        return rawList.map(raw => TaskMapper.toDomainDefinition(raw));
     }
-
 
     async findLastInstance(taskDefId: string): Promise<TaskInstance | null> {
-        return await this.prisma.taskInstance.findFirst({
-            where: {taskDefId},
-            orderBy: {dueDate: 'desc'}, 
+        const raw = await this.prisma.taskInstance.findFirst({
+            where: { taskDefId },
+            orderBy: { dueDate: 'desc' },
         });
-    }
 
+        if (!raw) return null;
+        return TaskMapper.toDomainInstance(raw as any);
+    }
 
     async hasPendingInstance(taskDefId: string): Promise<boolean> {
         const count = await this.prisma.taskInstance.count({
             where: {
                 taskDefId: taskDefId,
                 status: {
-                    in: [TaskStatus.PENDING, TaskStatus.IN_PROGRESS, TaskStatus.IN_REVIEW]
+                    in: [PrismaTaskStatus.PENDING, PrismaTaskStatus.IN_PROGRESS, PrismaTaskStatus.IN_REVIEW]
                 }
             }
         });
         return count > 0;
+    }
+
+    async findInstancesByHouseId(houseId: string, status?: TaskStatus): Promise<TaskInstance[]> {
+        const rawList = await this.prisma.taskInstance.findMany({
+            where: {
+                taskDef: { houseId: houseId },
+                ...(status ? { status: status as unknown as PrismaTaskStatus } : {})
+            },
+            include: {
+                taskDef: true, // Inclui a definição para mapearmos o título
+                assignedTo: true 
+            },
+            orderBy: { dueDate: 'asc' }
+        });
+
+        return rawList.map(raw => TaskMapper.toDomainInstance(raw));
     }
 }

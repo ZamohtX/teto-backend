@@ -3,7 +3,7 @@ import { TasksService } from './tasks.service';
 import { TasksController } from './tasks.controller';
 import { PrismaService } from 'src/database/prisma.service';
 import { TasksRepository } from './repositories/tasks.repository';
-import { PrismaTaskRepository } from './repositories/prima-tasks.repository';
+import { PrismaTasksRepository } from './repositories/prima-tasks.repository';
 import { TasksScheduler } from './tasks.scheduler';
 
 @Module({
@@ -14,7 +14,7 @@ import { TasksScheduler } from './tasks.scheduler';
     TasksScheduler,
     {
       provide: TasksRepository,
-      useClass: PrismaTaskRepository,
+      useClass: PrismaTasksRepository,
     },
   ],
 })

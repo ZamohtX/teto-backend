@@ -2,7 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import { CreateTaskDefinitionDto } from "./dto/create-task-definition.dto";
 import { TasksRepository } from "./repositories/tasks.repository";
 import { TaskFrequency } from "./enums/task-frequency.enum";
-import { TaskDefinition } from "@prisma/client";
+import { TaskDefinition } from "./entities/task-definition.entity";
 import { TaskStatus } from "./enums/task-status.enum";
 
 
