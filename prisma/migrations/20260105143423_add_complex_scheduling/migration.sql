@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "task_definitions" ADD COLUMN     "interval" INTEGER NOT NULL DEFAULT 1,
+ADD COLUMN     "startDate" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;

@@ -1,0 +1,179 @@
+// teto-backend/prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --- ENUMS ---
+enum UserRole {
+  ADMIN
+  MEMBER
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  IN_REVIEW
+  COMPLETED
+  REJECTED
+  EXPIRED     // Adicionei EXPIRED para cobrir o caso de não feito
+}
+
+enum TaskFrequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+  YEARLY
+  EMERGENCY
+  ONE_TIME
+}
+
+
+enum TradeStatus {
+  OPEN
+  ACCEPTED
+  CANCELLED
+}
+
+// --- MODELS ---
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String   
+  avatarUrl String?
+
+  // Lista das casas associadas
+  memberships Membership[]
+
+  tasksAssigned TaskInstance[]
+  validations   Validation[]
+  
+  tradesOffered  Trade[] @relation("TradeOfferer")
+  tradesAccepted Trade[] @relation("TradeAccepter")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+model House {
+  id          String @id @default(uuid())
+  name        String
+  inviteCode  String @unique
+
+  members     Membership[]
+  taskDefs    TaskDefinition[]
+  
+  createdAt   DateTime @default(now()) // Corrigido C maiusculo
+  updatedAt   DateTime @updatedAt
+
+  @@map("houses")
+}
+
+model Membership {
+  id String @id @default(uuid())
+
+  // Quem?
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  // Onde?
+  houseId String
+  house   House  @relation(fields: [houseId], references: [id])
+
+  // Dados Contextuais
+  role       UserRole @default(MEMBER)
+  points     Int      @default(0)
+  reputation Int      @default(100)
+  streak     Int      @default(0)
+
+  joinedAt   DateTime @default(now())
+
+  @@unique([userId, houseId]) // Um user só entra 1 vez na mesma casa
+  @@map("memberships")
+}
+
+model TaskDefinition {
+  id  String  @id   @default(uuid())
+  title   String
+  description   String?
+  weight  Int   @default(1)
+
+  frequency TaskFrequency @default(WEEKLY)
+
+  interval  Int   @default(1)
+  selectedDays  Int[] 
+  startDate   DateTime  @default(now())
+
+  repeatCount   Int   @default(1)
+
+  houseId   String
+  house   House   @relation(fields:[houseId], references: [id])
+  
+  instances TaskInstance[]
+
+  @@map("task_definitions")
+}
+
+model TaskInstance {
+  id  String  @id @default(uuid())
+  dueDate   DateTime
+  completedAt   DateTime?
+  proofPhotoUrl   String?
+  status  TaskStatus  @default(PENDING)
+  
+  taskDefId   String
+  taskDef TaskDefinition  @relation(fields: [taskDefId], references: [id])
+
+  assignedToId  String?
+  assignedTo  User?  @relation(fields: [assignedToId], references: [id])
+
+  validations   Validation[]
+  trades  Trade[]
+
+  @@map("task_instance")
+}
+
+
+model Validation {
+  id        String   @id @default(uuid())
+  approved  Boolean
+  comment   String?  // Deixei opcional, as vezes só o OK basta
+  
+  taskInstanceId String
+  taskInstance   TaskInstance @relation(fields: [taskInstanceId], references: [id])
+
+  validatorId    String
+  validator      User         @relation(fields: [validatorId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@map("validations")
+}
+
+model Trade {
+  id     String      @id @default(uuid())
+  status TradeStatus @default(OPEN)
+
+  taskInstanceId String
+  taskInstance   TaskInstance @relation(fields: [taskInstanceId], references: [id])
+
+  offererId String
+  offerer   User   @relation("TradeOfferer", fields: [offererId], references: [id])
+  
+  accepterId String?
+  accepter   User?  @relation("TradeAccepter", fields: [accepterId], references: [id]) // Corrigido typo
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("trades")
+}

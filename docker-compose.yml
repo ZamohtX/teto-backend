@@ -1,0 +1,15 @@
+version: '3'
+services:
+  teto_db:
+    image: postgres:13
+    container_name: teto_db
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: 34321204
+      POSTGRES_DB: teto_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+volumes:
+  pgdata:
