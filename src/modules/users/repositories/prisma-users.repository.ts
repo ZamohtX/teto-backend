@@ -4,6 +4,7 @@ import { UsersRepository } from "./users.repository";
 import { User } from "../entities/user.entity";
 import { UserMapper } from "../mappers/user.mapper";
 import { CreateUserDto } from "../dto/create-user.dto";
+import { UpdateUserDto } from "../dto/update-user.dto";
 
 @Injectable()
 export class PrismaUsersRepository implements UsersRepository {
@@ -38,4 +39,17 @@ export class PrismaUsersRepository implements UsersRepository {
         return UserMapper.toDomain(raw);
     }
 
+    async update(id: string, data: UpdateUserDto): Promise<User>{
+        const raw = await this.prisma.user.update({
+            where: {id},
+            data: data,
+        });
+        return UserMapper.toDomain(raw);
+    }
+
+    async delete(id: string): Promise<void> {
+        await this.prisma.user.delete({
+            where: {id},
+        });
+    }
 }

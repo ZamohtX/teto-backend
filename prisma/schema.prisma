@@ -21,7 +21,7 @@ enum TaskStatus {
   IN_REVIEW
   COMPLETED
   REJECTED
-  EXPIRED     // Adicionei EXPIRED para cobrir o caso de não feito
+  EXPIRED   
 }
 
 enum TaskFrequency {
@@ -72,7 +72,7 @@ model House {
   members     Membership[]
   taskDefs    TaskDefinition[]
   
-  createdAt   DateTime @default(now()) // Corrigido C maiusculo
+  createdAt   DateTime @default(now()) 
   updatedAt   DateTime @updatedAt
 
   @@map("houses")
@@ -83,7 +83,7 @@ model Membership {
 
   // Quem?
   userId String
-  user   User   @relation(fields: [userId], references: [id])
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // Onde?
   houseId String
@@ -134,7 +134,7 @@ model TaskInstance {
   taskDef TaskDefinition  @relation(fields: [taskDefId], references: [id])
 
   assignedToId  String?
-  assignedTo  User?  @relation(fields: [assignedToId], references: [id])
+  assignedTo  User?  @relation(fields: [assignedToId], references: [id], onDelete: SetNull)
 
   validations   Validation[]
   trades  Trade[]
@@ -146,7 +146,7 @@ model TaskInstance {
 model Validation {
   id        String   @id @default(uuid())
   approved  Boolean
-  comment   String?  // Deixei opcional, as vezes só o OK basta
+  comment   String? 
   
   taskInstanceId String
   taskInstance   TaskInstance @relation(fields: [taskInstanceId], references: [id])

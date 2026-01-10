@@ -1,7 +1,8 @@
-import { Injectable, ConflictException } from '@nestjs/common';
+import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
 import { UsersRepository } from './repositories/users.repository';
 import { CreateUserDto } from './dto/create-user.dto';
 import * as bcrypt from 'bcrypt';
+import { UpdateUserDto } from './dto/update-user.dto';
 
 @Injectable()
 export class UsersService {
@@ -24,7 +25,6 @@ export class UsersService {
         // Montamos o objeto para o Banco
         const dataToSave = {
             ...userData,
-            // AQUI ESTÁ A CORREÇÃO:
             // A chave do objeto deve ser 'password' (igual ao schema.prisma),
             // mas o valor é o hash que geramos.
             password: passwordHash, 
@@ -42,5 +42,26 @@ export class UsersService {
 
     async findByEmail(email: string){
         return this.usersRepository.findByEmail(email);
+    }
+
+    async findById(id: string){
+        const user = await this.usersRepository.findById(id);
+        if (!user) throw new NotFoundException('Usuário não encontrado');
+
+        // Remove senha antes de devolver
+        const { password, ...result} = user;
+        return result;
+    }
+
+    async update(id: string, updateUserDto: UpdateUserDto) {
+        if (updateUserDto.password){
+            updateUserDto.password = await bcrypt.hash(updateUserDto.password, 10);
+        }
+        return this.usersRepository.update(id, updateUserDto);
+    }
+
+    async remove(id: string){
+        await this.findById(id);
+        return this.usersRepository.delete(id);
     }
 }

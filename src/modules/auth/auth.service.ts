@@ -18,7 +18,7 @@ export class AuthService {
         const user = await this.usersService.findByEmail(email);
 
         // 2. Se o usuário não existe, lança erro
-        if (!user) {
+        if (!user || !user.password) {
             throw new UnauthorizedException('Credenciais Invalidas');
         }
 
