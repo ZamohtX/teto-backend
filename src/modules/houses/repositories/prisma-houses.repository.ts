@@ -6,6 +6,7 @@ import { House } from "../entities/house.entity";
 import { UserRole as PrismaUserRole } from "@prisma/client";
 import { UserRole } from "../enums/user-role.enum";
 import { HouseMapper } from "../mappers/house.mapper";
+import { UpdateHouseDto } from "../dto/update-house.dto";
 
 @Injectable()
 export class PrismaHousesRepository implements HousesRepository {
@@ -68,4 +69,40 @@ export class PrismaHousesRepository implements HousesRepository {
             },
         });
     }
+
+    async findById(id: string): Promise<House | null> {
+        const raw = await this.prisma.house.findUnique({
+            where: {id},
+        });
+        if (!raw) return null;
+        return HouseMapper.toDomain(raw);
+    }
+
+    async findAllByUserId(userId: string): Promise<House[]> {
+        // Buscamos as Memberships desse usuário e incluimos os dados da casa
+        const memberships = await this.prisma.membership.findMany({
+            where: { userId },
+            include: { house: true }, // JOIN com a tabela House
+        });
+        return memberships.map(m=>HouseMapper.toDomain(m.house));
+    }
+
+    async update(id: string, data: UpdateHouseDto): Promise<House> {
+        const raw = await this.prisma.house.update({
+            where: { id },
+            data: data,
+        });
+        return HouseMapper.toDomain(raw);
+    }
+
+    async delete(id: string): Promise<void> {
+        await this.prisma.house.delete({
+            where: { id }
+        });
+    }
+
+
+    
+
+
 }

@@ -87,7 +87,7 @@ model Membership {
 
   // Onde?
   houseId String
-  house   House  @relation(fields: [houseId], references: [id])
+  house   House  @relation(fields: [houseId], references: [id], onDelete: Cascade)
 
   // Dados Contextuais
   role       UserRole @default(MEMBER)
@@ -116,7 +116,7 @@ model TaskDefinition {
   repeatCount   Int   @default(1)
 
   houseId   String
-  house   House   @relation(fields:[houseId], references: [id])
+  house   House   @relation(fields:[houseId], references: [id], onDelete: Cascade)
   
   instances TaskInstance[]
 
@@ -131,7 +131,7 @@ model TaskInstance {
   status  TaskStatus  @default(PENDING)
   
   taskDefId   String
-  taskDef TaskDefinition  @relation(fields: [taskDefId], references: [id])
+  taskDef TaskDefinition  @relation(fields: [taskDefId], references: [id], onDelete: Cascade)
 
   assignedToId  String?
   assignedTo  User?  @relation(fields: [assignedToId], references: [id], onDelete: SetNull)
