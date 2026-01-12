@@ -9,12 +9,15 @@ import { TaskDefinition } from "../entities/task-definition.entity";
 import { TaskInstance } from "../entities/task-instance.entity";
 import { TaskStatus } from "../enums/task-status.enum";
 import { TaskMapper } from "../mappers/task.mapper";
+import { UpdateTaskDefinitionDto } from "../dto/update-task-definition.dto";
+import { dmmfToRuntimeDataModel } from "@prisma/client/runtime/library";
+import { UpdateTaskInstanceDto } from "../dto/update-task-instance.dto";
 
 @Injectable()
 export class PrismaTasksRepository implements TasksRepository {
 
     constructor(private readonly prisma: PrismaService){}
-
+  
     async createDefinition(data: CreateTaskDefinitionDto): Promise<TaskDefinition> {
         const raw = await this.prisma.taskDefinition.create({
             data: {
@@ -30,12 +33,10 @@ export class PrismaTasksRepository implements TasksRepository {
             }
         });
 
-        // CONVERSÃO AQUI
         return TaskMapper.toDomainDefinition(raw);
     }
 
     async createInstance(taskDefId: string, dueDate: Date): Promise<void> {
-        // Void não precisa de mapper
         await this.prisma.taskInstance.create({
             data: {
                 taskDefId: taskDefId,
@@ -88,4 +89,60 @@ export class PrismaTasksRepository implements TasksRepository {
 
         return rawList.map(raw => TaskMapper.toDomainInstance(raw));
     }
+
+    async findDefinitionById(id: string): Promise<TaskDefinition | null> {
+        const raw = await this.prisma.taskDefinition.findUnique({
+            where: { id }
+        });
+        if (!raw) return null;
+        return TaskMapper.toDomainDefinition(raw);
+    }
+
+    async findInstanceById(id: string): Promise<TaskInstance | null> {
+        const raw = await this.prisma.taskInstance.findUnique({
+            where: { id },
+            include: { taskDef: true }
+        });
+        if (!raw) return null;
+        return TaskMapper.toDomainInstance(raw as any);
+    }
+
+    async updateDefinition(id: string, data: UpdateTaskDefinitionDto): Promise<TaskDefinition> {
+        const raw = await this.prisma.taskDefinition.update({
+            where: { id },
+            data: {
+                ...data,
+                frequency: data.frequency ? (data.frequency as unknown as PrismaTaskFrequency) : undefined,
+                startDate: data.startDate ? new Date(data.startDate) : undefined,
+            }
+        });
+        return TaskMapper.toDomainDefinition(raw);
+    }
+
+
+    async updateInstance(id: string, data: UpdateTaskInstanceDto) : Promise<TaskInstance> {
+        const raw = await this.prisma.taskInstance.update({
+            where: { id },
+            data: {
+                ...data,
+                status: data.status ? (data.status as unknown as PrismaTaskStatus) : undefined,
+                completedAt: data.completedAt ? new Date(data.completedAt) : undefined,
+            },
+            include: { taskDef: true }
+        });
+        return TaskMapper.toDomainInstance(raw as any);
+    }
+
+
+    async deleteDefinition(id: string): Promise<void> {
+        await this.prisma.taskDefinition.delete({
+            where: { id }
+        });
+    }
+
+
+
+
+
+
 }

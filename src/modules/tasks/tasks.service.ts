@@ -1,10 +1,11 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { CreateTaskDefinitionDto } from "./dto/create-task-definition.dto";
 import { TasksRepository } from "./repositories/tasks.repository";
 import { TaskFrequency } from "./enums/task-frequency.enum";
 import { TaskDefinition } from "./entities/task-definition.entity";
 import { TaskStatus } from "./enums/task-status.enum";
-
+import { UpdateTaskDefinitionDto } from "./dto/update-task-definition.dto";
+import { UpdateTaskInstanceDto } from "./dto/update-task-instance.dto";
 
 @Injectable()
 export class TasksService {
@@ -16,15 +17,13 @@ export class TasksService {
     async createDefinition(createDto: CreateTaskDefinitionDto, userId: string){
         const taskDef = await this.tasksRepository.createDefinition(createDto);
 
-        if (createDto.frequency === TaskFrequency.ONE_TIME){
-            const dueDate = new Date(taskDef.startDate);
-            await this.tasksRepository.createInstance(taskDef.id, dueDate);
-        }
+        const dueDate = new Date(taskDef.startDate);
+        await this.tasksRepository.createInstance(taskDef.id, dueDate);
 
         return {
             message: 'Definição criada com sucesso!',
             taskDefinition: taskDef,
-            generateInstance: createDto.frequency === TaskFrequency.ONE_TIME
+            generateInstance: true 
         }
     };
 
@@ -118,5 +117,44 @@ export class TasksService {
             }
         }
         return null;    
+    }
+
+    async listHouseTasks(houseId: string, status?: TaskStatus){
+        return this.tasksRepository.findInstancesByHouseId(houseId, status);
+    }
+
+    async findOneDefinition(id: string) {
+        const taskDef = await this.tasksRepository.findDefinitionById(id);
+        if(!taskDef) throw new NotFoundException('Definição de tarefa não encontrada');
+        return taskDef;
+    }
+
+
+    async updateDefinition(id: string, updateDto: UpdateTaskDefinitionDto){
+        await this.findOneDefinition(id);
+        return this.tasksRepository.updateDefinition(id, updateDto);
+    }
+
+
+    async removeDefinition(id: string) {
+        await this.findOneDefinition(id);
+        return this.tasksRepository.deleteDefinition(id);
+    }
+
+
+    async updateInstance(id: string, updateDto: UpdateTaskInstanceDto) {
+        const instance = await this.tasksRepository.findInstanceById(id);
+        if (!instance ) throw new NotFoundException('Tarefa não encontrada');
+    
+        // Se marcou como COMPLETO e não enviou a data, assume "agora"
+        if (updateDto.status === TaskStatus.COMPLETED && !updateDto.completedAt){
+            updateDto.completedAt = new Date();
+        }
+
+        // Se mudou o status para algo que não é completed, limpa a data de conclusão
+        // (para caso alguem tenha marcado sem querer e desmarcou)
+        if (updateDto.status && updateDto.status !== TaskStatus.COMPLETED){}
+    
+        return this.tasksRepository.updateInstance(id, updateDto);
     }
 }
