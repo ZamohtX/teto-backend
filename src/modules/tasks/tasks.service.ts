@@ -141,6 +141,12 @@ export class TasksService {
         return this.tasksRepository.deleteDefinition(id);
     }
 
+    async findOneInstance(id: string){
+        const instance = await this.tasksRepository.findInstanceById(id);
+        if (!instance) throw new NotFoundException('Tarefa não encontrada.');
+        return instance;;
+    }
+
 
     async updateInstance(id: string, updateDto: UpdateTaskInstanceDto) {
         const instance = await this.tasksRepository.findInstanceById(id);

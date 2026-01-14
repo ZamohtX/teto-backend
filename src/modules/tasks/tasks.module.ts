@@ -17,5 +17,6 @@ import { TasksScheduler } from './tasks.scheduler';
       useClass: PrismaTasksRepository,
     },
   ],
+  exports: [TasksService]
 })
 export class TasksModule {}

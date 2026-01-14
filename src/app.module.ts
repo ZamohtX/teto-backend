@@ -5,6 +5,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { HousesModule } from './modules/houses/houses.module';
 import { TasksModule } from './modules/tasks/tasks.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { ValidationsModule } from './modules/validations/validations.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     AuthModule,
     HousesModule, 
     TasksModule,
+    ValidationsModule,
   ],
   controllers: [],
   providers: [PrismaService],
