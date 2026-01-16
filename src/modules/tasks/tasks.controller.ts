@@ -52,4 +52,9 @@ export class TasksController{
     return this.tasksService.updateInstance(id, dto);
   }
 
+  @Get('instances/:id')
+  findById(@Param('id') id: string) {
+    return this.tasksService.findOneInstance(id);
+  }
+
 }
